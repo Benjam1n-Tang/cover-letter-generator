@@ -26,7 +26,7 @@ if grep -q "your_github_token_here" .env; then
 fi
 
 # Start the application
-echo "🌐 Starting web server on http://localhost:5000"
+echo "🌐 Starting web server on http://localhost:5001"
 echo "Press Ctrl+C to stop the server"
 echo ""
 

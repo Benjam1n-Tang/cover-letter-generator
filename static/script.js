@@ -31,6 +31,14 @@ class CoverLetterGenerator {
     document
       .getElementById('coverLetterForm')
       .addEventListener('submit', (e) => this.generateCoverLetter(e));
+
+    // Cover letter editing
+    document
+      .getElementById('savePdfBtn')
+      .addEventListener('click', () => this.saveCoverLetterPdf());
+    document
+      .getElementById('backToFormBtn')
+      .addEventListener('click', () => this.backToForm());
   }
 
   async loadInitialData() {
@@ -61,6 +69,9 @@ class CoverLetterGenerator {
     document.getElementById('email').value = profile.email || '';
     document.getElementById('phone').value = profile.phone || '';
     document.getElementById('address').value = profile.address || '';
+    document.getElementById('city').value = profile.city || '';
+    document.getElementById('state').value = profile.state || '';
+    document.getElementById('zipCode').value = profile.zip_code || '';
   }
 
   async saveProfile() {
@@ -70,6 +81,9 @@ class CoverLetterGenerator {
       email: document.getElementById('email').value.trim(),
       phone: document.getElementById('phone').value.trim(),
       address: document.getElementById('address').value.trim(),
+      city: document.getElementById('city').value.trim(),
+      state: document.getElementById('state').value.trim(),
+      zip_code: document.getElementById('zipCode').value.trim(),
     };
 
     // Validate required fields
@@ -79,6 +93,9 @@ class CoverLetterGenerator {
       'email',
       'phone',
       'address',
+      'city',
+      'state',
+      'zip_code',
     ];
     const missingFields = requiredFields.filter((field) => !profileData[field]);
 
@@ -235,18 +252,43 @@ class CoverLetterGenerator {
     event.preventDefault();
 
     const formData = {
+      hiring_manager: document.getElementById('hiringManager').value.trim(),
+      hiring_manager_role: document
+        .getElementById('hiringManagerRole')
+        .value.trim(),
+      job_role: document.getElementById('jobRole').value.trim(),
       company_name: document.getElementById('companyName').value.trim(),
-      location: document.getElementById('location').value.trim(),
+      company_address: document.getElementById('companyAddress').value.trim(),
+      company_city: document.getElementById('companyCity').value.trim(),
+      company_state: document.getElementById('companyState').value.trim(),
+      company_zip: document.getElementById('companyZip').value.trim(),
       job_description: document.getElementById('jobDescription').value.trim(),
     };
 
     // Validate required fields
     if (
+      !formData.job_role ||
       !formData.company_name ||
-      !formData.location ||
+      !formData.company_city ||
+      !formData.company_state ||
       !formData.job_description
     ) {
-      this.showAlert('Please fill in all job information fields', 'danger');
+      this.showAlert(
+        'Please fill in all required job information fields',
+        'danger',
+      );
+      return;
+    }
+
+    // Validate hiring manager fields - if one is provided, both must be provided
+    if (
+      (formData.hiring_manager && !formData.hiring_manager_role) ||
+      (!formData.hiring_manager && formData.hiring_manager_role)
+    ) {
+      this.showAlert(
+        'If you provide a hiring manager name, you must also provide their role',
+        'danger',
+      );
       return;
     }
 
@@ -268,16 +310,22 @@ class CoverLetterGenerator {
 
       if (response.ok) {
         const result = await response.json();
-        this.showAlert('Cover letter generated successfully!', 'success');
 
-        // Reset form
-        document.getElementById('coverLetterForm').reset();
+        // Show the editor with generated text
+        this.showEditor(
+          result.cover_letter_text,
+          result.company_name,
+          result.company_location,
+          result.company_address,
+          result.hiring_manager,
+          result.hiring_manager_role,
+          result.job_role,
+        );
 
-        // Refresh cover letters list
-        await this.loadCoverLetters();
-
-        // Auto-download the generated cover letter
-        this.downloadCoverLetter(result.cover_letter_id);
+        this.showAlert(
+          'Cover letter generated! Please review and edit before saving.',
+          'success',
+        );
       } else {
         const error = await response.json();
         this.showAlert(
@@ -292,6 +340,119 @@ class CoverLetterGenerator {
       generateBtn.disabled = false;
       spinner.style.display = 'none';
       generateBtn.classList.remove('loading');
+    }
+  }
+
+  showEditor(
+    coverLetterText,
+    companyName,
+    companyLocation,
+    companyAddress = '',
+    hiringManager = '',
+    hiringManagerRole = '',
+    jobRole = '',
+  ) {
+    // Hide generate section and show editor
+    document.getElementById('generateSection').style.display = 'none';
+    document.getElementById('editorSection').style.display = 'block';
+
+    // Populate editor
+    document.getElementById('coverLetterEditor').value = coverLetterText;
+
+    // Build company info display
+    let companyInfo = `${companyName}`;
+    if (jobRole) {
+      companyInfo += ` - ${jobRole}`;
+    }
+    companyInfo += ` - ${companyLocation}`;
+
+    document.getElementById('companyInfo').textContent = companyInfo;
+
+    // Store data for later use
+    this.currentCoverLetter = {
+      text: coverLetterText,
+      company: companyName,
+      company_location: companyLocation,
+      company_address: companyAddress,
+      hiring_manager: hiringManager,
+      hiring_manager_role: hiringManagerRole,
+      job_role: jobRole,
+    };
+
+    // Scroll to editor
+    document
+      .getElementById('editorSection')
+      .scrollIntoView({ behavior: 'smooth' });
+  }
+
+  backToForm() {
+    document.getElementById('editorSection').style.display = 'none';
+    document.getElementById('generateSection').style.display = 'block';
+    document
+      .getElementById('generateSection')
+      .scrollIntoView({ behavior: 'smooth' });
+  }
+
+  async saveCoverLetterPdf() {
+    const editedText = document
+      .getElementById('coverLetterEditor')
+      .value.trim();
+
+    if (!editedText) {
+      this.showAlert('Please enter cover letter content', 'danger');
+      return;
+    }
+
+    if (!this.currentCoverLetter) {
+      this.showAlert('No cover letter data available', 'danger');
+      return;
+    }
+
+    const savePdfBtn = document.getElementById('savePdfBtn');
+    const spinner = document.getElementById('savePdfSpinner');
+
+    savePdfBtn.disabled = true;
+    spinner.style.display = 'inline-block';
+
+    try {
+      const response = await fetch('/api/generate-cover-letter-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cover_letter_text: editedText,
+          company_name: this.currentCoverLetter.company,
+          company_location: this.currentCoverLetter.company_location,
+          company_address: this.currentCoverLetter.company_address,
+          hiring_manager: this.currentCoverLetter.hiring_manager,
+          hiring_manager_role: this.currentCoverLetter.hiring_manager_role,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        this.showAlert('Cover letter PDF saved successfully!', 'success');
+
+        // Auto-download the PDF
+        this.downloadCoverLetter(result.cover_letter_id);
+
+        // Refresh cover letters list
+        await this.loadCoverLetters();
+
+        // Reset form and go back
+        document.getElementById('coverLetterForm').reset();
+        this.backToForm();
+      } else {
+        const error = await response.json();
+        this.showAlert(error.error || 'Error saving PDF', 'danger');
+      }
+    } catch (error) {
+      console.error('Error saving PDF:', error);
+      this.showAlert('Error saving PDF', 'danger');
+    } finally {
+      savePdfBtn.disabled = false;
+      spinner.style.display = 'none';
     }
   }
 
