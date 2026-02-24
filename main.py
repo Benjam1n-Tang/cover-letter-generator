@@ -296,30 +296,20 @@ def generate_cover_letter_pdf():
             filename,
         )
 
-        # Save cover letter metadata
+        # Generate unique filename for direct download - no JSON metadata needed
         cover_letter_id = str(uuid.uuid4())
-        metadata = {
-            "id": cover_letter_id,
-            "company_name": company_name,
-            "company_location": company_location,
-            "company_address": company_address,
-            "hiring_manager": hiring_manager,
-            "hiring_manager_role": hiring_manager_role,
-            "filename": f"{filename}.pdf",
-            "created_at": datetime.now().isoformat(),
-            "text_content": cover_letter_text,
-        }
+        pdf_filename = f"{filename}_{cover_letter_id[:8]}.pdf"
 
-        metadata_path = COVER_LETTERS_DIR / f"{cover_letter_id}.json"
-        with open(metadata_path, "w") as f:
-            json.dump(metadata, f, indent=2)
+        # Rename the PDF to include unique ID
+        final_pdf_path = COVER_LETTERS_DIR / pdf_filename
+        Path(pdf_path).rename(final_pdf_path)
 
         return jsonify(
             {
                 "message": "Cover letter PDF generated successfully",
-                "cover_letter_id": cover_letter_id,
-                "filename": f"{filename}.pdf",
-                "download_url": f"/api/download/{cover_letter_id}",
+                "cover_letter_id": cover_letter_id[:8],
+                "filename": pdf_filename,
+                "download_url": f"/api/download/{pdf_filename}",
             }
         )
 
@@ -328,25 +318,19 @@ def generate_cover_letter_pdf():
         return jsonify({"error": "Failed to generate cover letter PDF"}), 500
 
 
-@app.route("/api/download/<cover_letter_id>")
-def download_cover_letter(cover_letter_id):
-    """Download a generated cover letter"""
-    metadata_path = COVER_LETTERS_DIR / f"{cover_letter_id}.json"
+@app.route("/api/download/<filename>")
+def download_cover_letter(filename):
+    """Download a generated cover letter PDF directly"""
+    # Security check - ensure filename ends with .pdf and contains no path traversal
+    if not filename.endswith(".pdf") or "/" in filename or ".." in filename:
+        return jsonify({"error": "Invalid filename"}), 400
 
-    if not metadata_path.exists():
-        return jsonify({"error": "Cover letter not found"}), 404
-
-    with open(metadata_path, "r") as f:
-        metadata = json.load(f)
-
-    pdf_path = COVER_LETTERS_DIR / metadata["filename"]
+    pdf_path = COVER_LETTERS_DIR / filename
 
     if not pdf_path.exists():
         return jsonify({"error": "PDF file not found"}), 404
 
-    return send_file(
-        str(pdf_path), as_attachment=True, download_name=metadata["filename"]
-    )
+    return send_file(str(pdf_path), as_attachment=True, download_name=filename)
 
 
 @app.route("/api/cover-letters", methods=["GET"])

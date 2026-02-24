@@ -454,7 +454,7 @@ class CoverLetterGenerator {
         this.showAlert('Cover letter PDF saved successfully!', 'success');
 
         // Auto-download the PDF
-        this.downloadCoverLetter(result.cover_letter_id);
+        this.downloadCoverLetter(result.filename);
 
         // Reset form and go back
         document.getElementById('coverLetterForm').reset();
@@ -484,8 +484,8 @@ class CoverLetterGenerator {
     return;
   }
 
-  downloadCoverLetter(coverletterId) {
-    window.open(`/api/download/${coverletterId}`, '_blank');
+  downloadCoverLetter(filename) {
+    window.open(`/api/download/${filename}`, '_blank');
   }
 
   updateUI() {
