@@ -19,11 +19,6 @@ class CoverLetterGenerator {
       .getElementById('uploadResumeBtn')
       .addEventListener('click', () => this.uploadResume());
 
-    // Resume PDF generation
-    document
-      .getElementById('generateResumeBtn')
-      .addEventListener('click', () => this.generateResumePdf());
-
     // Cover letter generation
     document
       .getElementById('generateBtn')
@@ -43,7 +38,14 @@ class CoverLetterGenerator {
 
   async loadInitialData() {
     await this.loadProfile();
+    await this.loadResume();
     await this.loadCoverLetters();
+    console.log(
+      'After loading all data - Profile:',
+      this.profileLoaded,
+      'Resume:',
+      this.resumeUploaded,
+    );
     this.updateUI();
   }
 
@@ -55,11 +57,41 @@ class CoverLetterGenerator {
         if (profile && profile.first_name) {
           this.populateProfileForm(profile);
           this.profileLoaded = true;
-          this.showAlert('Profile loaded successfully!', 'success');
         }
       }
     } catch (error) {
       console.error('Error loading profile:', error);
+    }
+  }
+
+  async loadResume() {
+    try {
+      console.log('Loading resume status...');
+      const response = await fetch('/api/resume');
+      console.log('Resume API response status:', response.status);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Resume check result:', result);
+
+        if (result.has_resume) {
+          console.log('Setting resumeUploaded to true');
+          this.resumeUploaded = true;
+          console.log(
+            'Resume status set to uploaded - this.resumeUploaded:',
+            this.resumeUploaded,
+          );
+          console.log('Calling updateUI immediately after setting resume flag');
+          this.updateUI();
+        } else {
+          console.log('No resume found on server');
+          this.resumeUploaded = false;
+        }
+      } else {
+        console.log('Resume API request failed with status:', response.status);
+      }
+    } catch (error) {
+      console.error('Error checking resume status:', error);
     }
   }
 
@@ -142,6 +174,7 @@ class CoverLetterGenerator {
       return;
     }
 
+    console.log('Starting resume upload...');
     const formData = new FormData();
     formData.append('resume', file);
 
@@ -157,78 +190,37 @@ class CoverLetterGenerator {
         body: formData,
       });
 
+      console.log('Upload response status:', response.status);
+
       if (response.ok) {
         const result = await response.json();
+        console.log('Upload successful, result:', result);
+
         this.resumeUploaded = true;
+        console.log('Set resumeUploaded to true after upload');
+
         this.showAlert('Resume uploaded successfully!', 'success');
         bootstrap.Modal.getInstance(
           document.getElementById('resumeModal'),
         ).hide();
+
+        console.log('Calling updateUI after successful upload');
         this.updateUI();
 
         // Reset file input
         fileInput.value = '';
       } else {
         const error = await response.json();
+        console.error('Upload failed:', error);
         this.showAlert(error.error || 'Error uploading resume', 'danger');
       }
     } catch (error) {
-      console.error('Error uploading resume:', error);
-      this.showAlert('Error uploading resume', 'danger');
+      console.error('Upload error (catch block):', error);
+      this.showAlert('Network error - please try again', 'danger');
     } finally {
       uploadBtn.disabled = false;
       spinner.style.display = 'none';
     }
-  }
-
-  async generateResumePdf() {
-    if (!this.profileLoaded) {
-      this.showAlert('Please set up your profile first', 'warning');
-      return;
-    }
-
-    if (!this.resumeUploaded) {
-      this.showAlert('Please upload your resume first', 'warning');
-      return;
-    }
-
-    const generateBtn = document.getElementById('generateResumeBtn');
-    const originalText = generateBtn.innerHTML;
-
-    generateBtn.disabled = true;
-    generateBtn.innerHTML =
-      '<span class="spinner-border spinner-border-sm me-1"></span>Generating...';
-
-    try {
-      const response = await fetch('/api/generate-resume-pdf', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        this.showAlert('Resume PDF generated successfully!', 'success');
-
-        // Auto-download the generated resume PDF
-        this.downloadResumePdf(result.resume_id);
-      } else {
-        const error = await response.json();
-        this.showAlert(error.error || 'Error generating resume PDF', 'danger');
-      }
-    } catch (error) {
-      console.error('Error generating resume PDF:', error);
-      this.showAlert('Error generating resume PDF', 'danger');
-    } finally {
-      generateBtn.disabled = false;
-      generateBtn.innerHTML = originalText;
-    }
-  }
-
-  downloadResumePdf(resumeId) {
-    window.open(`/api/download-resume/${resumeId}`, '_blank');
   }
 
   showGenerateSection() {
@@ -503,42 +495,66 @@ class CoverLetterGenerator {
 
   updateUI() {
     // Update setup step indicators
-    const profileStep = document.querySelector('.setup-step:nth-child(1)');
-    const resumeStep = document.querySelector('.setup-step:nth-child(2)');
-    const generateStep = document.querySelector('.setup-step:nth-child(3)');
+    const profileStep = document.querySelector(
+      '.col-md-4:nth-child(1) .setup-step',
+    );
+    const resumeStep = document.querySelector(
+      '.col-md-4:nth-child(2) .setup-step',
+    );
+    const generateStep = document.querySelector(
+      '.col-md-4:nth-child(3) .setup-step',
+    );
+
+    console.log(
+      'UpdateUI called - Profile loaded:',
+      this.profileLoaded,
+      'Resume uploaded:',
+      this.resumeUploaded,
+    );
+    console.log('Profile step element:', profileStep);
+    console.log('Resume step element:', resumeStep);
 
     // Update profile step
     if (this.profileLoaded) {
-      profileStep.querySelector('.step-number').style.background =
-        'var(--success-color)';
-      profileStep.querySelector('button').innerHTML =
-        '<i class="fas fa-check me-1"></i>Profile Setup';
-      profileStep
-        .querySelector('button')
-        .classList.remove('btn-outline-primary');
-      profileStep.querySelector('button').classList.add('btn-success');
+      console.log('Updating profile step UI');
+      if (profileStep) {
+        profileStep.querySelector('.step-number').style.background =
+          'var(--success-color)';
+        profileStep.querySelector('.step-number').style.color = 'white';
+        profileStep.querySelector('button').innerHTML =
+          '<i class="fas fa-check me-1"></i>Profile Setup';
+        profileStep
+          .querySelector('button')
+          .classList.remove('btn-outline-primary');
+        profileStep.querySelector('button').classList.add('btn-success');
+      }
     }
 
     // Update resume step
     if (this.resumeUploaded) {
-      resumeStep.querySelector('.step-number').style.background =
-        'var(--success-color)';
-      resumeStep.querySelector('button').innerHTML =
-        '<i class="fas fa-check me-1"></i>Resume Uploaded';
-      resumeStep
-        .querySelector('button')
-        .classList.remove('btn-outline-primary');
-      resumeStep.querySelector('button').classList.add('btn-success');
-
-      // Enable resume PDF generation button
-      document.getElementById('generateResumeBtn').disabled = false;
+      console.log('Updating resume step UI');
+      if (resumeStep) {
+        resumeStep.querySelector('.step-number').style.background =
+          'var(--success-color)';
+        resumeStep.querySelector('.step-number').style.color = 'white';
+        resumeStep.querySelector('button').innerHTML =
+          '<i class="fas fa-check me-1"></i>Resume Uploaded';
+        resumeStep
+          .querySelector('button')
+          .classList.remove('btn-outline-primary');
+        resumeStep.querySelector('button').classList.add('btn-success');
+      }
     }
 
     // Enable generate button if both profile and resume are ready
     if (this.profileLoaded && this.resumeUploaded) {
-      generateStep.querySelector('button').disabled = false;
-      generateStep.querySelector('.step-number').style.background =
-        'var(--success-color)';
+      console.log('Both profile and resume ready, enabling generate button');
+      if (generateStep) {
+        generateStep.querySelector('button').disabled = false;
+        generateStep.querySelector('.step-number').style.background =
+          'var(--success-color)';
+        generateStep.querySelector('.step-number').style.color = 'white';
+      }
     }
   }
 

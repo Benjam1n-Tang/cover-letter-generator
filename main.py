@@ -65,31 +65,41 @@ def handle_profile():
         return jsonify({"message": "Profile saved successfully"})
 
 
-@app.route("/api/resume", methods=["POST"])
-def upload_resume():
-    """Upload and parse resume"""
-    if "resume" not in request.files:
-        return jsonify({"error": "No resume file provided"}), 400
+@app.route("/api/resume", methods=["GET", "POST"])
+def handle_resume():
+    """Handle resume operations"""
+    if request.method == "GET":
+        # Check if resume exists
+        resume_content = resume_parser.get_latest_resume_content()
+        if resume_content:
+            return jsonify({"has_resume": True, "message": "Resume found"})
+        else:
+            return jsonify({"has_resume": False, "message": "No resume uploaded"})
 
-    file = request.files["resume"]
-    if file.filename == "":
-        return jsonify({"error": "No file selected"}), 400
+    elif request.method == "POST":
+        """Upload and parse resume"""
+        if "resume" not in request.files:
+            return jsonify({"error": "No resume file provided"}), 400
 
-    if file:
-        filename = secure_filename(file.filename)
-        filepath = RESUME_DIR / filename
-        file.save(str(filepath))
+        file = request.files["resume"]
+        if file.filename == "":
+            return jsonify({"error": "No file selected"}), 400
 
-        # Parse resume content
-        resume_content = resume_parser.parse_resume(str(filepath))
+        if file:
+            filename = secure_filename(file.filename)
+            filepath = RESUME_DIR / filename
+            file.save(str(filepath))
 
-        return jsonify(
-            {
-                "message": "Resume uploaded successfully",
-                "filename": filename,
-                "content": resume_content,
-            }
-        )
+            # Parse resume content
+            resume_content = resume_parser.parse_resume(str(filepath))
+
+            return jsonify(
+                {
+                    "message": "Resume uploaded successfully",
+                    "filename": filename,
+                    "content": resume_content,
+                }
+            )
 
 
 @app.route("/api/generate-resume-pdf", methods=["POST"])
