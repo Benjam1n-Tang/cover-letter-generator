@@ -1,0 +1,16 @@
+{
+  "Default Template": {
+    "content": "Dear [MR/MS HR LAST NAME], \n\nI am writing to express my strong interest in the [Role Name] position at [Company Name]. As a Computer Science student at Stony Brook University graduating in 2026, I have been following [Company Name]\u2019s work in [mention a specific product, feature, or mission of theirs]. I am particularly drawn to your team's focus on [mention a specific value they have, e.g., scalability, user-centric design, or innovation], as it mirrors my own passion for building software that solves tangible problems.\nIn my recent internships, I learned that effective engineering is about more than just writing clean code; it is about driving business impact. At Opportunity Knocks, I didn't just implement features; I focused on how those features\u2014like a new subscription system\u2014could directly translate to revenue and user retention. This experience taught me to prioritize engineering decisions that balance technical debt with immediate business needs, a mindset I am eager to bring to the engineering team at [Company Name].\nBeyond my professional work, I am passionate about building full-stack applications that leverage emerging technologies. Recently, I built [TutorAI / ResuMaker], where I focused heavily on [mention a challenge: e.g., minimizing latency for AI voice responses OR creating an intuitive UX for document management]. This project sharpened my ability to learn new tools like [Supabase / Next.js / OpenAI API] quickly and implement them effectively to improve the end-user experience.\nI am confident that my technical foundation in full-stack development, combined with my adaptability and focus on product quality, would make me a valuable addition to your team. Thank you for your time and consideration. I look forward to the possibility of discussing how I can contribute to [Company Name]\u2019s continued success.\n\n\nSincerely,\nBenjamin Tang",
+    "created_at": "2026-02-23",
+    "placeholders": [
+      "Company Name",
+      "MR/MS HR LAST NAME",
+      "Role Name",
+      "Supabase / Next.js / OpenAI API",
+      "TutorAI / ResuMaker",
+      "mention a challenge: e.g., minimizing latency for AI voice responses OR creating an intuitive UX for document management",
+      "mention a specific product, feature, or mission of theirs",
+      "mention a specific value they have, e.g., scalability, user-centric design, or innovation"
+    ]
+  }
+}

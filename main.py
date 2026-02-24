@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from app.pdf_generator import PDFGenerator
 from app.resume_parser import ResumeParser
 from app.profile_manager import ProfileManager
+from app.template_manager import TemplateManager
 
 # Load environment variables
 load_dotenv()
@@ -31,15 +32,17 @@ DATA_DIR = Path("data")
 RESUME_DIR = DATA_DIR / "resume"
 COVER_LETTERS_DIR = DATA_DIR / "cover_letters"
 PROFILES_DIR = DATA_DIR / "profiles"
+TEMPLATES_DIR = DATA_DIR / "templates"
 
 # Ensure directories exist
-for directory in [DATA_DIR, RESUME_DIR, COVER_LETTERS_DIR, PROFILES_DIR]:
+for directory in [DATA_DIR, RESUME_DIR, COVER_LETTERS_DIR, PROFILES_DIR, TEMPLATES_DIR]:
     directory.mkdir(exist_ok=True)
 
 # Initialize managers
 pdf_generator = PDFGenerator()
 resume_parser = ResumeParser()
 profile_manager = ProfileManager(PROFILES_DIR)
+template_manager = TemplateManager(TEMPLATES_DIR)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -370,6 +373,103 @@ def list_cover_letters():
     return jsonify(cover_letters)
 
 
+# Template Management Endpoints
+@app.route("/api/templates", methods=["GET", "POST"])
+def handle_templates():
+    """Handle template operations"""
+    if request.method == "GET":
+        templates = template_manager.list_templates()
+        return jsonify(templates)
+
+    elif request.method == "POST":
+        data = request.json
+        name = data.get("name")
+        content = data.get("content")
+
+        if not name or not content:
+            return jsonify({"error": "Template name and content are required"}), 400
+
+        success = template_manager.save_template(name, content)
+        if success:
+            return jsonify({"message": "Template saved successfully"})
+        else:
+            return jsonify({"error": "Failed to save template"}), 500
+
+
+@app.route("/api/templates/<template_name>", methods=["GET", "DELETE"])
+def handle_single_template(template_name):
+    """Handle single template operations"""
+    if request.method == "GET":
+        template = template_manager.get_template(template_name)
+        if template:
+            return jsonify(template)
+        else:
+            return jsonify({"error": "Template not found"}), 404
+
+    elif request.method == "DELETE":
+        success = template_manager.delete_template(template_name)
+        if success:
+            return jsonify({"message": "Template deleted successfully"})
+        else:
+            return jsonify({"error": "Template not found"}), 404
+
+
+@app.route("/api/generate-from-template", methods=["POST"])
+def generate_from_template():
+    """Generate cover letter from template"""
+    try:
+        data = request.json
+        template_name = data.get("template_name")
+        job_data = data.get("job_data", {})
+
+        if not template_name:
+            return jsonify({"error": "Template name is required"}), 400
+
+        # Get user profile and resume content
+        profile = profile_manager.get_profile()
+        if not profile:
+            return jsonify({"error": "No user profile found"}), 400
+
+        resume_content = resume_parser.get_latest_resume_content() or ""
+
+        # Get smart replacements
+        replacements = template_manager.get_smart_replacements(
+            job_data, profile, resume_content
+        )
+
+        # Generate content from template
+        cover_letter_text = template_manager.generate_from_template(
+            template_name, replacements
+        )
+
+        if not cover_letter_text:
+            return (
+                jsonify(
+                    {"error": "Failed to generate from template or template not found"}
+                ),
+                400,
+            )
+
+        return jsonify(
+            {
+                "cover_letter_text": cover_letter_text,
+                "company_name": job_data.get("company_name", ""),
+                "company_location": f"{job_data.get('company_city', '')}, {job_data.get('company_state', '')}".strip(
+                    ", "
+                ),
+                "company_address": job_data.get("company_address", ""),
+                "hiring_manager": job_data.get("hiring_manager", ""),
+                "hiring_manager_role": job_data.get("hiring_manager_role", ""),
+                "job_role": job_data.get("job_role", ""),
+                "replacements_used": replacements,
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error generating from template: {str(e)}")
+        return jsonify({"error": "Failed to generate cover letter from template"}), 500
+
+
 def generate_cover_letter_ai(
     profile,
     resume_content,
@@ -379,9 +479,14 @@ def generate_cover_letter_ai(
     job_description,
     hiring_manager="",
     hiring_manager_role="",
+    template_guidance=None,
 ):
-    """Generate cover letter using AI with professional template format"""
+    """Generate cover letter using AI with optional template guidance"""
 
+    # Handle template guidance
+    template_guidance_text = ""
+    if template_guidance:
+        template_guidance_text = f"\n\nTEMPLATE GUIDANCE (use as inspiration for style and structure):\n{template_guidance}\n"
     system_prompt = """You are an expert cover letter writer who creates highly professional, personalized cover letters that sound authentic and human-written, not AI-generated.
 
 CRITICAL GUIDELINES:
@@ -423,7 +528,7 @@ APPLICANT'S BACKGROUND:
 
 JOB DETAILS:
 {job_description}
-
+{template_guidance_text}
 Write 3-4 compelling paragraphs that:
 1. Show genuine interest in {company_name} and the {job_role} position, demonstrating knowledge of their work
 2. Highlight specific relevant experience from the background with quantifiable impact

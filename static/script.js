@@ -34,11 +34,27 @@ class CoverLetterGenerator {
     document
       .getElementById('backToFormBtn')
       .addEventListener('click', () => this.backToForm());
+
+    // Template management
+    document
+      .getElementById('templateForm')
+      .addEventListener('submit', (e) => this.saveTemplate(e));
+    document
+      .getElementById('refreshTemplatesBtn')
+      .addEventListener('click', () => this.loadTemplates());
+
+    // Load templates when modal is shown
+    document
+      .getElementById('templateModal')
+      .addEventListener('show.bs.modal', () => {
+        this.loadTemplates();
+      });
   }
 
   async loadInitialData() {
     await this.loadProfile();
     await this.loadResume();
+    await this.loadTemplates();
     console.log(
       'After loading all data - Profile:',
       this.profileLoaded,
@@ -296,12 +312,19 @@ class CoverLetterGenerator {
     generateBtn.classList.add('loading');
 
     try {
+      // Check if template is selected
+      const selectedTemplate = document.getElementById('templateSelect').value;
+
+      // Always use AI generation, but pass template as guidance if selected
       const response = await fetch('/api/generate-cover-letter', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          template_guidance: selectedTemplate || null,
+        }),
       });
 
       if (response.ok) {
@@ -553,6 +576,145 @@ class CoverLetterGenerator {
           alert.close();
         }
       }, duration);
+    }
+  }
+
+  // Template Management Methods
+  async loadTemplates() {
+    try {
+      const response = await fetch('/api/templates');
+      if (response.ok) {
+        const templates = await response.json();
+        this.populateTemplateSelect(templates);
+        this.displayTemplatesList(templates);
+      }
+    } catch (error) {
+      console.error('Error loading templates:', error);
+    }
+  }
+
+  populateTemplateSelect(templates) {
+    const select = document.getElementById('templateSelect');
+    select.innerHTML = '';
+
+    if (templates.length > 0) {
+      // Make first template the default
+      templates.forEach((template, index) => {
+        const option = document.createElement('option');
+        option.value = template.name;
+        option.textContent = template.name;
+        if (index === 0) {
+          option.selected = true;
+        }
+        select.appendChild(option);
+      });
+
+      // Add "No Template" as last option
+      const noTemplateOption = document.createElement('option');
+      noTemplateOption.value = '';
+      noTemplateOption.textContent = 'No Template (Basic AI generation)';
+      select.appendChild(noTemplateOption);
+    } else {
+      // If no templates, just show the no template option
+      select.innerHTML =
+        '<option value="">No Template (Basic AI generation)</option>';
+    }
+  }
+
+  displayTemplatesList(templates) {
+    const container = document.getElementById('templatesList');
+
+    if (templates.length === 0) {
+      container.innerHTML =
+        '<p class="text-muted">No templates created yet.</p>';
+      return;
+    }
+
+    const html = templates
+      .map(
+        (template) => `
+      <div class="template-item border rounded p-3 mb-2">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h6 class="mb-0">${template.name}</h6>
+          <button class="btn btn-outline-danger btn-sm" onclick="app.deleteTemplate('${template.name}')">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+        <div class="mb-2">
+          <small class="text-muted">Placeholders: ${template.placeholders.join(', ')}</small>
+        </div>
+        <div class="template-preview">
+          <small class="text-muted">${template.preview}</small>
+        </div>
+      </div>
+    `,
+      )
+      .join('');
+
+    container.innerHTML = html;
+  }
+
+  async saveTemplate(event) {
+    event.preventDefault();
+
+    const name = document.getElementById('templateName').value.trim();
+    const content = document.getElementById('templateContent').value.trim();
+
+    if (!name || !content) {
+      this.showAlert('Please enter both template name and content', 'danger');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/templates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, content }),
+      });
+
+      if (response.ok) {
+        this.showAlert('Template saved successfully!', 'success');
+        document.getElementById('templateForm').reset();
+        this.loadTemplates();
+      } else {
+        const error = await response.json();
+        this.showAlert(error.error || 'Error saving template', 'danger');
+      }
+    } catch (error) {
+      console.error('Error saving template:', error);
+      this.showAlert('Error saving template', 'danger');
+    }
+  }
+
+  async deleteTemplate(templateName) {
+    if (
+      !confirm(
+        `Are you sure you want to delete the template "${templateName}"?`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/templates/${encodeURIComponent(templateName)}`,
+        {
+          method: 'DELETE',
+        },
+      );
+
+      if (response.ok) {
+        this.showAlert('Template deleted successfully!', 'success');
+        this.loadTemplates();
+      } else {
+        const error = await response.json();
+        this.showAlert(error.error || 'Error deleting template', 'danger');
+      }
+    } catch (error) {
+      console.error('Error deleting template:', error);
+      this.showAlert('Error deleting template', 'danger');
     }
   }
 }
