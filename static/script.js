@@ -263,6 +263,32 @@ class CoverLetterGenerator {
   async generateCoverLetter(event) {
     event.preventDefault();
 
+    // Parse the company location field
+    const locationInput = document
+      .getElementById('companyLocation')
+      .value.trim();
+    let companyCity = '';
+    let companyState = '';
+    let companyZip = '';
+
+    if (locationInput) {
+      // Parse formats like "New York, NY 10001" or "Los Angeles, CA"
+      const locationParts = locationInput.split(',');
+      if (locationParts.length >= 2) {
+        companyCity = locationParts[0].trim();
+        const stateZipPart = locationParts[1].trim();
+
+        // Split state and zip (zip is usually last space-separated part)
+        const stateZipParts = stateZipPart.split(/\s+/);
+        if (stateZipParts.length >= 2) {
+          companyState = stateZipParts[0];
+          companyZip = stateZipParts.slice(1).join(' '); // Join in case zip has spaces
+        } else {
+          companyState = stateZipPart;
+        }
+      }
+    }
+
     const formData = {
       hiring_manager: document.getElementById('hiringManager').value.trim(),
       hiring_manager_role: document
@@ -271,9 +297,9 @@ class CoverLetterGenerator {
       job_role: document.getElementById('jobRole').value.trim(),
       company_name: document.getElementById('companyName').value.trim(),
       company_address: document.getElementById('companyAddress').value.trim(),
-      company_city: document.getElementById('companyCity').value.trim(),
-      company_state: document.getElementById('companyState').value.trim(),
-      company_zip: document.getElementById('companyZip').value.trim(),
+      company_city: companyCity,
+      company_state: companyState,
+      company_zip: companyZip,
       job_description: document.getElementById('jobDescription').value.trim(),
     };
 
@@ -281,12 +307,13 @@ class CoverLetterGenerator {
     if (
       !formData.job_role ||
       !formData.company_name ||
-      !formData.company_city ||
-      !formData.company_state ||
+      !locationInput ||
+      !companyCity ||
+      !companyState ||
       !formData.job_description
     ) {
       this.showAlert(
-        'Please fill in all required job information fields',
+        'Please fill in all required job information fields. Make sure location is in format: City, State ZIP',
         'danger',
       );
       return;
