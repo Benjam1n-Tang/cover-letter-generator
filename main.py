@@ -487,28 +487,51 @@ def generate_cover_letter_ai(
     template_guidance_text = ""
     if template_guidance:
         template_guidance_text = f"\n\nTEMPLATE GUIDANCE (use as inspiration for style and structure):\n{template_guidance}\n"
-    system_prompt = """You are an expert cover letter writer who creates highly professional, personalized cover letters that sound authentic and human-written, not AI-generated.
+    system_prompt = """You are an expert cover letter writer who creates highly professional, authentic cover letters that sound genuinely human-written and passionate, never robotic or AI-generated.
 
-CRITICAL GUIDELINES:
-- Write in a professional, confident tone that sounds natural and human
-- NEVER use double dashes (--) in your writing
-- Use single dashes (-) when needed for punctuation
-- Keep it to exactly 3-4 paragraphs (not including greeting/closing)
-- Make it highly specific to the company and role
-- Include specific examples from the applicant's experience
-- Demonstrate genuine interest in the company's mission/products
-- Focus on business impact and value proposition
-- Use active voice and strong action verbs
-- Avoid generic phrases and clichés
-- Sound engaged and passionate, but professional
+CRITICAL TONE REQUIREMENTS:
+- Write in a natural, conversational yet professional tone
+- Sound genuinely excited and passionate about the specific opportunity
+- NEVER use double dashes (--) or em dashes that sound AI-generated
+- Use simple, clear language that feels authentic
+- Avoid overly formal or robotic phrasing
+- Focus on quality over quantity - every sentence should add value
+- DO NOT copy specific numbers, percentages, or detailed project descriptions from the resume
+- Use the resume as context for understanding skills and experience level, not as content to copy
 
-STRUCTURE:
-1. Opening paragraph: Express interest, mention specific company details/mission
-2. Middle paragraph(s): Highlight relevant experience with specific examples and impact
-3. Closing paragraph: Reinforce value proposition and express enthusiasm
+COVER LETTER PURPOSE:
+- Show connection and genuine interest in THIS specific company
+- Demonstrate what value you would bring to THEIR team
+- Explain how your background makes you excited about THEIR mission/work
+- Focus on learnings, growth, and team contribution rather than project details
 
-DO NOT include header, greeting, or signature - only the body paragraphs.
-The tone should match a top-tier professional who is genuinely excited about the opportunity."""
+REQUIRED STRUCTURE (exactly 4 paragraphs):
+
+1. OPENING PARAGRAPH (3-4 sentences):
+   - Express strong interest in the specific role at the specific company
+   - Briefly introduce who you are (student status, graduation year, etc.)
+   - Mention something specific about the company's work, products, or mission
+   - State what draws you to their team/values and how it aligns with your passion
+
+2. EXPERIENCE PARAGRAPH (4-5 sentences):
+   - Highlight the TYPE of professional experience you have (internships, projects, etc.)
+   - Focus on LEARNINGS and SKILLS GAINED, not specific project details or numbers
+   - Explain what this experience taught you about teamwork, problem-solving, or engineering
+   - Connect how these learnings would help you contribute to their team's success
+
+3. TECHNICAL/PROJECT PARAGRAPH (3-4 sentences):
+   - Discuss your technical growth and problem-solving approach
+   - Focus on learning new technologies quickly and adaptability
+   - Show your passion for building solutions that solve real problems
+   - Connect your technical mindset to what the company/role needs
+
+4. CLOSING PARAGRAPH (2-3 sentences):
+   - Confidently state how your skills and approach would make you valuable to their team
+   - Thank them professionally
+   - Express forward-looking enthusiasm about contributing to their specific mission
+
+DO NOT include header, greeting, or signature - only the 4 body paragraphs.
+Prioritize authenticity and genuine company connection over resume rehashing."""
 
     hiring_manager_info = ""
     if hiring_manager and hiring_manager_role:
@@ -516,7 +539,7 @@ The tone should match a top-tier professional who is genuinely excited about the
             f"\nHIRING MANAGER: {hiring_manager}, {hiring_manager_role}"
         )
 
-    user_prompt = f"""Write a professional cover letter body for:
+    user_prompt = f"""Write a professional, human-sounding cover letter body for:
 
 APPLICANT: {profile.get('first_name', '')} {profile.get('last_name', '')}
 POSITION: {job_role}
@@ -529,13 +552,20 @@ APPLICANT'S BACKGROUND:
 JOB DETAILS:
 {job_description}
 {template_guidance_text}
-Write 3-4 compelling paragraphs that:
-1. Show genuine interest in {company_name} and the {job_role} position, demonstrating knowledge of their work
-2. Highlight specific relevant experience from the background with quantifiable impact
-3. Demonstrate how the applicant's skills directly solve the company's needs for this {job_role} role
-4. Express enthusiasm for contributing to their mission
 
-Make it sound like {profile.get('first_name', '')} personally researched the company and is genuinely excited about this specific {job_role} role. Use specific technical skills and experiences mentioned in the background."""
+IMPORTANT: Use the background information to understand the applicant's experience level and skills, but DO NOT copy specific project details, numbers, percentages, or technical implementations. Focus on learnings, growth, and how the experience translates to value for {company_name}.
+
+Write exactly 4 paragraphs following this structure:
+
+PARAGRAPH 1: Express genuine interest in the {job_role} position at {company_name}. Introduce yourself as a Computer Science student graduating in 2026. Research and mention something specific about {company_name}'s work, products, or mission that genuinely interests you. Explain what draws you to their team's focus and how it aligns with your passion for building meaningful software solutions.
+
+PARAGRAPH 2: Discuss your internship/professional experience in general terms - focus on what you LEARNED about effective engineering, teamwork, or business impact rather than specific project details. Explain how these learnings shaped your approach to software development and how they would help you contribute meaningfully to {company_name}'s team.
+
+PARAGRAPH 3: Talk about your technical growth and passion for learning new technologies. Focus on your problem-solving mindset and adaptability rather than specific project implementations. Show how you approach challenges and how this mindset would benefit {company_name}'s {job_role} work.
+
+PARAGRAPH 4: Confidently state how your technical foundation, learning ability, and collaborative approach would make you a valuable addition to their team. Thank them for their time and consideration. Express genuine enthusiasm about contributing to {company_name}'s mission and success.
+
+Remember: This is about YOUR CONNECTION to {company_name} and the VALUE you would bring to THEIR team, not a summary of your resume. Sound like you've researched {company_name} specifically and are genuinely excited about this opportunity."""
 
     try:
         response = client.chat.completions.create(
