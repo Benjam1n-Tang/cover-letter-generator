@@ -39,7 +39,6 @@ class CoverLetterGenerator {
   async loadInitialData() {
     await this.loadProfile();
     await this.loadResume();
-    await this.loadCoverLetters();
     console.log(
       'After loading all data - Profile:',
       this.profileLoaded,
@@ -231,6 +230,11 @@ class CoverLetterGenerator {
 
     if (!this.resumeUploaded) {
       this.showAlert('Please upload your resume first', 'warning');
+      return;
+    }
+
+    // If already in editor mode, don't show form again
+    if (document.getElementById('editorSection').style.display === 'block') {
       return;
     }
 
@@ -429,9 +433,6 @@ class CoverLetterGenerator {
         // Auto-download the PDF
         this.downloadCoverLetter(result.cover_letter_id);
 
-        // Refresh cover letters list
-        await this.loadCoverLetters();
-
         // Reset form and go back
         document.getElementById('coverLetterForm').reset();
         this.backToForm();
@@ -449,44 +450,15 @@ class CoverLetterGenerator {
   }
 
   async loadCoverLetters() {
-    try {
-      const response = await fetch('/api/cover-letters');
-      if (response.ok) {
-        const coverLetters = await response.json();
-        this.displayCoverLetters(coverLetters);
-      }
-    } catch (error) {
-      console.error('Error loading cover letters:', error);
-    }
+    // Cover letters list has been removed from UI
+    // This method is kept for backward compatibility but does nothing
+    return;
   }
 
   displayCoverLetters(coverLetters) {
-    const container = document.getElementById('coverLettersList');
-
-    if (coverLetters.length === 0) {
-      container.innerHTML =
-        '<p class="text-muted">No cover letters generated yet.</p>';
-      return;
-    }
-
-    const html = coverLetters
-      .map(
-        (cl) => `
-            <div class="cover-letter-item fade-in">
-                <h6>${cl.company_name}</h6>
-                <p class="text-muted mb-2">${cl.location}</p>
-                <p class="text-muted mb-2" style="font-size: 0.8rem;">
-                    ${new Date(cl.created_at).toLocaleDateString()}
-                </p>
-                <button class="btn btn-primary btn-sm" onclick="app.downloadCoverLetter('${cl.id}')">
-                    <i class="fas fa-download me-1"></i>Download PDF
-                </button>
-            </div>
-        `,
-      )
-      .join('');
-
-    container.innerHTML = html;
+    // Cover letters list has been removed from UI
+    // This method is kept for backward compatibility but does nothing
+    return;
   }
 
   downloadCoverLetter(coverletterId) {

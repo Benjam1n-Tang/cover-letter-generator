@@ -128,8 +128,8 @@ class PDFGenerator:
             current_date = datetime.now().strftime("%B %d, %Y")
             story.append(Paragraph(current_date, self.date_style))
 
-            # Add 2 lines after date
-            story.append(Spacer(1, 0.3 * inch))
+            # Reduced space after date
+            story.append(Spacer(1, 0.15 * inch))
 
             # Company information with hiring manager logic
             if hiring_manager and hiring_manager_role:
@@ -141,16 +141,14 @@ class PDFGenerator:
                 )
                 story.append(Paragraph(f"Mr. {last_name}", self.company_style))
                 story.append(Paragraph(hiring_manager_role, self.company_style))
-            else:
-                story.append(Paragraph("Hiring Manager", self.company_style))
 
             story.append(Paragraph(company_name, self.company_style))
             if company_address:
                 story.append(Paragraph(company_address, self.company_style))
             story.append(Paragraph(company_location, self.company_style))
 
-            # Add space after company info
-            story.append(Spacer(1, 0.15 * inch))
+            # Add more space after company info before greeting
+            story.append(Spacer(1, 0.25 * inch))
 
             # Greeting
             if hiring_manager and hiring_manager_role:
@@ -229,10 +227,10 @@ class PDFGenerator:
             doc = SimpleDocTemplate(
                 str(pdf_path),
                 pagesize=letter,
-                topMargin=1 * inch,
-                bottomMargin=1 * inch,
-                leftMargin=1 * inch,
-                rightMargin=1 * inch,
+                topMargin=0.75 * inch,
+                bottomMargin=0.75 * inch,
+                leftMargin=0.75 * inch,
+                rightMargin=0.75 * inch,
             )
 
             # Build document content
