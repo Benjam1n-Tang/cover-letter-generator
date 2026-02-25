@@ -296,18 +296,16 @@ def generate_cover_letter_pdf():
             filename,
         )
 
-        # Generate unique filename for direct download - no JSON metadata needed
-        cover_letter_id = str(uuid.uuid4())
-        pdf_filename = f"{filename}_{cover_letter_id[:8]}.pdf"
+        # Use clean filename for direct download
+        pdf_filename = f"{filename}.pdf"
 
-        # Rename the PDF to include unique ID
+        # Move the PDF to the cover letters directory with clean filename
         final_pdf_path = COVER_LETTERS_DIR / pdf_filename
         Path(pdf_path).rename(final_pdf_path)
 
         return jsonify(
             {
                 "message": "Cover letter PDF generated successfully",
-                "cover_letter_id": cover_letter_id[:8],
                 "filename": pdf_filename,
                 "download_url": f"/api/download/{pdf_filename}",
             }
